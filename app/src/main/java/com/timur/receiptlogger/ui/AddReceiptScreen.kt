@@ -1,24 +1,29 @@
 package com.timur.receiptlogger.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -58,11 +63,29 @@ fun AddReceiptScreen(
         ActivityResultContracts.TakePicture()
     ) { success -> hasPhoto = success && photoFile != null }
 
+    val galleryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            val copied = ImageUtils.copyToImageFile(context, uri)
+            if (copied != null) {
+                photoFile = copied
+                hasPhoto = true
+            }
+        }
+    }
+
     fun launchCamera() {
         val file = ImageUtils.createImageFile(context)
         photoFile = file
         val uri = ImageUtils.getUriForFile(context, file)
         cameraLauncher.launch(uri)
+    }
+
+    fun launchGallery() {
+        galleryLauncher.launch(
+            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+        )
     }
 
     val amount = amountText.toDoubleOrNull()
@@ -114,12 +137,24 @@ fun AddReceiptScreen(
                 }
             }
 
-            Button(
-                onClick = { launchCamera() },
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(Icons.Filled.PhotoCamera, contentDescription = null)
-                Text(if (hasPhoto) "  Retake photo" else "  Take photo")
+                Button(
+                    onClick = { launchCamera() },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Filled.PhotoCamera, contentDescription = null)
+                    Text(if (hasPhoto) "  Retake" else "  Camera")
+                }
+                OutlinedButton(
+                    onClick = { launchGallery() },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Filled.PhotoLibrary, contentDescription = null)
+                    Text("  Gallery")
+                }
             }
 
             OutlinedTextField(

@@ -11,6 +11,9 @@ interface ReceiptDao {
     @Insert
     suspend fun insert(entry: ReceiptEntry)
 
-    @Query("SELECT * FROM receipts ORDER BY timestamp DESC")
-    fun getAll(): Flow<List<ReceiptEntry>>
+    @Query("SELECT * FROM receipts WHERE tripId = :tripId ORDER BY timestamp DESC")
+    fun getByTrip(tripId: Long): Flow<List<ReceiptEntry>>
+
+    @Query("SELECT COALESCE(SUM(amount), 0) FROM receipts WHERE tripId = :tripId")
+    fun getTotalForTrip(tripId: Long): Flow<Double>
 }

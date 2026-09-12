@@ -43,6 +43,7 @@ import java.io.File
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddReceiptScreen(
+    tripName: String = "",
     onBack: () -> Unit,
     onSave: (photoPath: String, amount: Double, note: String) -> Unit
 ) {
@@ -70,7 +71,7 @@ fun AddReceiptScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New receipt") },
+                title = { Text(if (tripName.isNotBlank()) "New receipt · $tripName" else "New receipt") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

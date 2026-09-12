@@ -3,6 +3,7 @@ package com.timur.receiptlogger.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,12 +14,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -36,35 +41,93 @@ import java.text.DateFormat
 import java.text.NumberFormat
 import java.util.Date
 
+/** Shows every receipt logged under one trip, plus a running total. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReceiptListScreen(
+fun TripDetailScreen(
+    tripName: String,
+    startDate: Long?,
+    endDate: Long?,
+    total: Double,
     receipts: List<ReceiptEntry>,
-    onAddClick: () -> Unit
+    onBack: () -> Unit,
+    onAddClick: () -> Unit,
+    onExportClick: () -> Unit
 ) {
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Receipts") }) },
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(tripName)
+                        if (startDate != null && endDate != null) {
+                            Text(
+                                formatDateRange(startDate, endDate),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (receipts.isNotEmpty()) {
+                        IconButton(onClick = onExportClick) {
+                            Icon(Icons.Filled.Share, contentDescription = "Export to Excel")
+                        }
+                    }
+                }
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddClick) {
                 Icon(Icons.Filled.Add, contentDescription = "Add receipt")
             }
         }
     ) { padding ->
-        if (receipts.isEmpty()) {
-            EmptyState(modifier = Modifier.padding(padding))
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(receipts, key = { it.id }) { entry ->
-                    ReceiptRow(entry)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            TotalBanner(total)
+            HorizontalDivider()
+            if (receipts.isEmpty()) {
+                EmptyState(modifier = Modifier.weight(1f))
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentPadding = PaddingValues(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(receipts, key = { it.id }) { entry ->
+                        ReceiptRow(entry)
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TotalBanner(total: Double) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text("Total spent", style = MaterialTheme.typography.titleMedium)
+        Text(
+            formatAmount(total),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
     }
 }
 
@@ -82,7 +145,7 @@ private fun EmptyState(modifier: Modifier = Modifier) {
                 tint = MaterialTheme.colorScheme.primary
             )
             Text(
-                "No receipts yet",
+                "No receipts on this trip yet",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 12.dp)
             )
@@ -137,3 +200,8 @@ private fun ReceiptRow(entry: ReceiptEntry) {
 
 private fun formatAmount(amount: Double): String =
     NumberFormat.getCurrencyInstance().format(amount)
+
+private fun formatDateRange(startDate: Long, endDate: Long): String {
+    val df = DateFormat.getDateInstance(DateFormat.MEDIUM)
+    return "${df.format(Date(startDate))} – ${df.format(Date(endDate))}"
+}

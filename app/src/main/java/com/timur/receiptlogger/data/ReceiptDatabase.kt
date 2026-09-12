@@ -5,9 +5,10 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [ReceiptEntry::class], version = 1, exportSchema = false)
+@Database(entities = [Trip::class, ReceiptEntry::class], version = 3, exportSchema = false)
 abstract class ReceiptDatabase : RoomDatabase() {
 
+    abstract fun tripDao(): TripDao
     abstract fun receiptDao(): ReceiptDao
 
     companion object {
@@ -20,7 +21,10 @@ abstract class ReceiptDatabase : RoomDatabase() {
                     context.applicationContext,
                     ReceiptDatabase::class.java,
                     "receipts.db"
-                ).build().also { INSTANCE = it }
+                )
+                    // Prototype: no migration path yet, just recreate the DB on schema change.
+                    .fallbackToDestructiveMigration()
+                    .build().also { INSTANCE = it }
             }
     }
 }

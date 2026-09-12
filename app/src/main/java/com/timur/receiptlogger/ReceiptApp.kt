@@ -21,11 +21,15 @@ import com.timur.receiptlogger.ui.TripListScreen
 private object Routes {
     const val TRIPS = "trips"
     const val ADD_TRIP = "trips/add"
+    const val EDIT_TRIP = "trip/{tripId}/edit"
     const val TRIP_DETAIL = "trip/{tripId}"
     const val ADD_RECEIPT = "trip/{tripId}/add"
+    const val EDIT_RECEIPT = "trip/{tripId}/receipt/{receiptId}/edit"
 
     fun tripDetail(tripId: Long) = "trip/$tripId"
+    fun editTrip(tripId: Long) = "trip/$tripId/edit"
     fun addReceipt(tripId: Long) = "trip/$tripId/add"
+    fun editReceipt(tripId: Long, receiptId: Long) = "trip/$tripId/receipt/$receiptId/edit"
 }
 
 @Composable
@@ -39,7 +43,9 @@ fun ReceiptApp(viewModel: ReceiptViewModel = viewModel()) {
                 trips = trips,
                 totalForTrip = { tripId -> viewModel.totalForTrip(tripId) },
                 onTripClick = { tripId -> navController.navigate(Routes.tripDetail(tripId)) },
-                onAddTripClick = { navController.navigate(Routes.ADD_TRIP) }
+                onAddTripClick = { navController.navigate(Routes.ADD_TRIP) },
+                onEditTripClick = { tripId -> navController.navigate(Routes.editTrip(tripId)) },
+                onDeleteTrip = { trip -> viewModel.deleteTrip(trip) }
             )
         }
 
@@ -54,6 +60,24 @@ fun ReceiptApp(viewModel: ReceiptViewModel = viewModel()) {
                         popUpTo(Routes.ADD_TRIP) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        composable(
+            route = Routes.EDIT_TRIP,
+            arguments = listOf(navArgument("tripId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val tripId = backStackEntry.arguments?.getLong("tripId") ?: return@composable
+            val existingTrip = trips.find { it.id == tripId }
+
+            AddTripScreen(
+                existingTrip = existingTrip,
+                onBack = { navController.popBackStack() },
+                onCreate = { name, startDate, endDate ->
+                    viewModel.updateTrip(tripId, name, startDate, endDate)
+                    tripId
+                },
+                onCreated = { navController.popBackStack() }
             )
         }
 
@@ -83,7 +107,9 @@ fun ReceiptApp(viewModel: ReceiptViewModel = viewModel()) {
                         val file = ExportUtils.exportTripReport(context, currentTrip, receipts)
                         ExportUtils.shareFile(context, file)
                     }
-                }
+                },
+                onEditReceipt = { entry -> navController.navigate(Routes.editReceipt(tripId, entry.id)) },
+                onDeleteReceipt = { entry -> viewModel.deleteReceipt(entry) }
             )
         }
 
@@ -98,6 +124,39 @@ fun ReceiptApp(viewModel: ReceiptViewModel = viewModel()) {
                 onBack = { navController.popBackStack() },
                 onSave = { photoPath, amount, note ->
                     viewModel.addReceipt(tripId, photoPath, amount, note)
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = Routes.EDIT_RECEIPT,
+            arguments = listOf(
+                navArgument("tripId") { type = NavType.LongType },
+                navArgument("receiptId") { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val tripId = backStackEntry.arguments?.getLong("tripId") ?: return@composable
+            val receiptId = backStackEntry.arguments?.getLong("receiptId") ?: return@composable
+            val tripName = trips.find { it.id == tripId }?.name.orEmpty()
+            val receiptsFlow = remember(tripId) { viewModel.receiptsForTrip(tripId) }
+            // null means "the flow hasn't emitted yet" (distinct from "emitted an empty list"),
+            // so AddReceiptScreen is only composed once the real entry is known — otherwise its
+            // remembered form fields would capture a still-null entry on the first frame and
+            // never notice the real data arriving a moment later.
+            val receipts by receiptsFlow.collectAsState(initial = null)
+            val loadedReceipts = receipts ?: return@composable
+            val existingEntry = loadedReceipts.find { it.id == receiptId }
+
+            AddReceiptScreen(
+                tripName = tripName,
+                existingEntry = existingEntry,
+                onBack = { navController.popBackStack() },
+                onSave = { photoPath, amount, note ->
+                    val entry = existingEntry
+                    if (entry != null) {
+                        viewModel.updateReceipt(entry, photoPath, amount, note)
+                    }
                     navController.popBackStack()
                 }
             )

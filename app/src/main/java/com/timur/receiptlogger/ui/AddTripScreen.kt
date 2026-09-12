@@ -29,6 +29,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.timur.receiptlogger.data.Trip
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.launch
@@ -36,13 +37,15 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTripScreen(
+    existingTrip: Trip? = null,
     onBack: () -> Unit,
     onCreate: suspend (name: String, startDate: Long, endDate: Long) -> Long,
     onCreated: (tripId: Long) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var startDate by remember { mutableStateOf<Long?>(null) }
-    var endDate by remember { mutableStateOf<Long?>(null) }
+    val isEditing = existingTrip != null
+    var name by remember { mutableStateOf(existingTrip?.name ?: "") }
+    var startDate by remember { mutableStateOf(existingTrip?.startDate) }
+    var endDate by remember { mutableStateOf(existingTrip?.endDate) }
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -55,7 +58,7 @@ fun AddTripScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New trip") },
+                title = { Text(if (isEditing) "Edit trip" else "New trip") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -115,7 +118,7 @@ fun AddTripScreen(
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Create trip")
+                Text(if (isEditing) "Save changes" else "Create trip")
             }
         }
     }

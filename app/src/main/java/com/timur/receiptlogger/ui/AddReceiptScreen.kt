@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.timur.receiptlogger.data.ReceiptEntry
 import com.timur.receiptlogger.util.ImageUtils
 import java.io.File
 
@@ -48,15 +49,19 @@ import java.io.File
 @Composable
 fun AddReceiptScreen(
     tripName: String = "",
+    existingEntry: ReceiptEntry? = null,
     onBack: () -> Unit,
     onSave: (photoPath: String, amount: Double, note: String) -> Unit
 ) {
     val context = LocalContext.current
+    val isEditing = existingEntry != null
 
-    var photoFile by remember { mutableStateOf<File?>(null) }
-    var hasPhoto by rememberSaveable { mutableStateOf(false) }
-    var amountText by rememberSaveable { mutableStateOf("") }
-    var note by rememberSaveable { mutableStateOf("") }
+    var photoFile by remember { mutableStateOf(existingEntry?.photoPath?.let { File(it) }) }
+    var hasPhoto by rememberSaveable { mutableStateOf(existingEntry != null) }
+    var amountText by rememberSaveable {
+        mutableStateOf(existingEntry?.amount?.let { formatAmountForInput(it) } ?: "")
+    }
+    var note by rememberSaveable { mutableStateOf(existingEntry?.note ?: "") }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture()
@@ -90,10 +95,17 @@ fun AddReceiptScreen(
     val amount = amountText.toDoubleOrNull()
     val canSave = hasPhoto && amount != null && amount > 0
 
+    val titleText = when {
+        isEditing && tripName.isNotBlank() -> "Edit receipt · $tripName"
+        isEditing -> "Edit receipt"
+        tripName.isNotBlank() -> "New receipt · $tripName"
+        else -> "New receipt"
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (tripName.isNotBlank()) "New receipt · $tripName" else "New receipt") },
+                title = { Text(titleText) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -187,8 +199,13 @@ fun AddReceiptScreen(
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Save")
+                Text(if (isEditing) "Save changes" else "Save")
             }
         }
     }
 }
+
+/** Renders a receipt's stored amount back into the input field, without a needless
+ *  trailing ".0" for whole numbers (the field's own validation still allows up to 2 decimals). */
+private fun formatAmountForInput(amount: Double): String =
+    if (amount == amount.toLong().toDouble()) amount.toLong().toString() else amount.toString()

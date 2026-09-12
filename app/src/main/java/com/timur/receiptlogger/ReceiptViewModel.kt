@@ -36,6 +36,17 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
             )
         )
 
+    /** Updates an existing trip's name and dates; its id and createdAt are kept unchanged. */
+    suspend fun updateTrip(tripId: Long, name: String, startDate: Long, endDate: Long) {
+        val existing = trips.value.find { it.id == tripId } ?: return
+        tripDao.update(existing.copy(name = name, startDate = startDate, endDate = endDate))
+    }
+
+    /** Deletes a trip and, via the foreign key's cascade, every receipt logged under it. */
+    fun deleteTrip(trip: Trip) {
+        viewModelScope.launch { tripDao.delete(trip) }
+    }
+
     fun receiptsForTrip(tripId: Long): Flow<List<ReceiptEntry>> =
         receiptDao.getByTrip(tripId)
 
@@ -56,5 +67,17 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
                 )
             )
         }
+    }
+
+    /** Updates an existing receipt's photo, amount and note; its id and both timestamps
+     *  (so it keeps its original place in date-sorted and createTime-sorted lists) are kept. */
+    fun updateReceipt(entry: ReceiptEntry, photoPath: String, amount: Double, note: String) {
+        viewModelScope.launch {
+            receiptDao.update(entry.copy(photoPath = photoPath, amount = amount, note = note))
+        }
+    }
+
+    fun deleteReceipt(entry: ReceiptEntry) {
+        viewModelScope.launch { receiptDao.delete(entry) }
     }
 }

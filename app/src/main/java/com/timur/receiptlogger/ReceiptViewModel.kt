@@ -44,13 +44,15 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
 
     fun addReceipt(tripId: Long, photoPath: String, amount: Double, note: String) {
         viewModelScope.launch {
+            val now = System.currentTimeMillis()
             receiptDao.insert(
                 ReceiptEntry(
                     tripId = tripId,
                     photoPath = photoPath,
                     amount = amount,
                     note = note,
-                    timestamp = System.currentTimeMillis()
+                    timestamp = now,
+                    createTime = now
                 )
             )
         }

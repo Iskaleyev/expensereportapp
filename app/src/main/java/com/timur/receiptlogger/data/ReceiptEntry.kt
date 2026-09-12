@@ -28,5 +28,7 @@ data class ReceiptEntry(
     val photoPath: String,
     val amount: Double,
     val note: String,
-    val timestamp: Long
+    val timestamp: Long,
+    /** When this row was created, set once at insert time to the current datetime. */
+    val createTime: Long
 )
